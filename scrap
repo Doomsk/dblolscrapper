@@ -1,6 +1,13 @@
 #!/usr/bin/env python
 
-from scraper import main
+import sys
+
+from scraper import scrap_match, scrap_summoner
 
 if __name__ == '__main__':
-    main()
+    if len(sys.argv) < 2:
+        sys.exit('No action selected, exiting')
+    if '--match-id' in sys.argv:
+        scrap_match(sys.argv[-1])
+    if '--summoner-id' in sys.argv:
+        scrap_summoner(sys.argv[2:] if len(sys.argv) > 2 else None)
