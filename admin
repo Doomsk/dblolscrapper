@@ -1,0 +1,10 @@
+#!/usr/bin/env python
+
+import IPython
+
+from scraper.models import *
+from scraper.database import get_session
+
+session = get_session()
+
+IPython.embed()
