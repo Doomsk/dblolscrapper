@@ -3,19 +3,29 @@ from datetime import datetime
 import requests
 
 from scraper.database import get_session
-from scraper.models import Player, Match, PlayerMatchMap
+from scraper.models import Champion, Player, Match, PlayerMatchMap
 from scraper.settings import Config
 
 
-def fetch(resource, **kwargs):
-    url = 'https://br.api.pvp.net/api/lol/br/' + resource
+def fetch_base(base, resource, **kwargs):
+    url = base + resource
     kwargs['api_key'] = Config.TOKEN
     response = requests.get(url, params=kwargs)
     return response.json()
 
 
+def fetch_static(resource, **kwargs):
+    base = 'https://br.api.pvp.net/api/lol/static-data/br/'
+    return fetch_base(base, resource, **kwargs)
+
+def fetch(resource, **kwargs):
+    base = 'https://br.api.pvp.net/api/lol/br/'
+    return fetch_base(base, resource, **kwargs)
+
+
 def scrap_match(match_id):
     session = get_session()
+    print 'fetching data for match', match_id
 
     match_data = fetch('v2.2/match/%s' % match_id)
     participants = match_data['participants']
@@ -54,7 +64,7 @@ def scrap_match(match_id):
     session.commit()
 
 
-def scrap_summoner(summoner_ids=None):
+def scrap_summoner(summoner_ids=None, details=False):
     session = get_session()
     if summoner_ids is None:
         summoner_ids = [p.id for p in session.query(Player.id)]
@@ -65,10 +75,13 @@ def scrap_summoner(summoner_ids=None):
                              username=data['name'])
 
     for summoner_id in summoner_ids:
-        print 'fetching data for', summoner_id
+        print 'fetching data for summoner', summoner_id
         summoner_data = fetch('v2.2/matchlist/by-summoner/%s' % summoner_id)
         for match in summoner_data['matches']:
             print 'parsing', match['matchId']
+            Champion.get_or_create(session, {'id': match['champion']})
+            Match.get_or_create(session, {'id': match['matchId']})
+
             data = {
                 'player_id': summoner_id,
                 'match_id': match['matchId'],
@@ -79,9 +92,21 @@ def scrap_summoner(summoner_ids=None):
                 'season': match['season'],
             }
 
-            Match.get_or_create(session, {'id': match['matchId']})
             PlayerMatchMap.get_or_create(session, {
                 'player_id': summoner_id,
                 'match_id': data['match_id'],
             }, **data)
+
+            if details:
+                scrap_match(data['match_id'])
+
         session.commit()
+
+
+def scrap_champions():
+    session = get_session()
+
+    for name, data in fetch_static('v1.2/champion')['data'].iteritems():
+        print 'parsing', name
+        Champion.get_or_create(session, {'id': data['id']}, name=name)
+    session.commit()

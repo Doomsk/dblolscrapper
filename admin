@@ -2,7 +2,7 @@
 
 import IPython
 
-from scraper import fetch
+from scraper import fetch, fetch_static
 from scraper.models import *
 from scraper.database import get_session
 

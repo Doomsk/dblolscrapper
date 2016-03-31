@@ -28,6 +28,15 @@ class BaseORM(Base):
         return obj
 
 
+class Champion(BaseORM):
+    __tablename__ = 'champion'
+
+    id = Column(BigInteger, primary_key=True)
+    name = Column(Text)
+
+    matches = relationship('PlayerMatchMap', back_populates='champion')
+
+
 class Player(BaseORM):
     __tablename__ = 'player'
 
@@ -56,7 +65,7 @@ class PlayerMatchMap(BaseORM):
 
     player_id = Column(BigInteger, ForeignKey('player.id'), primary_key=True)
     match_id = Column(BigInteger, ForeignKey('match.id'), primary_key=True)
-    champion_id = Column(Integer)
+    champion_id = Column(Integer, ForeignKey('champion.id'))
     lane = Column(Text)
     role = Column(Text)
     queue = Column(Text)
@@ -68,3 +77,4 @@ class PlayerMatchMap(BaseORM):
 
     match = relationship('Match', back_populates='players')
     player = relationship('Player', back_populates='matches')
+    champion = relationship('Champion', back_populates='matches')

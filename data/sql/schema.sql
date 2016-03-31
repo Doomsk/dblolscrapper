@@ -20,11 +20,16 @@ CREATE TABLE player_match_map(
   lane TEXT,
   queue TEXT,
   season TEXT,
-  champion_id INT,
+  champion_id INT REFERENCES champion(id),
   kills INT,
   deaths INT,
   assists INT,
   has_won BOOLEAN,
 
   PRIMARY KEY (player_id, match_id)
+);
+
+CREATE TABLE champion(
+  id BIGINT PRIMARY KEY,
+  name TEXT
 );
