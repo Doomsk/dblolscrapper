@@ -1,7 +1,9 @@
+from datetime import datetime
+
 import requests
 
 from scraper.database import get_session
-from scraper.models import Player, Match, PlayerMatch
+from scraper.models import Player, Match, PlayerMatchMap
 from scraper.settings import Config
 
 
@@ -16,6 +18,18 @@ def scrap_match(match_id):
     session = get_session()
 
     match_data = fetch('v2.2/match/%s' % match_id)
+    participants = match_data['participants']
+
+    # Create the match
+    creation =  datetime.fromtimestamp(match_data['matchCreation'] / 1000.0)
+    data = {
+        'type': match_data['matchType'],
+        'version': match_data['matchVersion'],
+        'queue_type': match_data['queueType'],
+        'creation': creation,
+        'duration': match_data['matchDuration'],
+    }
+    Match.get_or_create(session, {'id': match_id}, **data)
 
     for participant in match_data['participantIdentities']:
         summoner_id = participant['player']['summonerId']
@@ -23,6 +37,20 @@ def scrap_match(match_id):
         print 'parsing', summoner_name
         Player.get_or_create(session, {'id': summoner_id},
                              username=summoner_name)
+        details = [p for p in participants
+                   if participant['participantId'] == p['participantId']][0]
+        data = {
+            'champion_id': details['championId'],
+            'season': match_data['season'],
+            'deaths': details['stats']['deaths'],
+            'kills': details['stats']['kills'],
+            'assists': details['stats']['assists'],
+            'has_won': details['stats']['winner'],
+        }
+        PlayerMatchMap.get_or_create(session, {
+            'player_id': summoner_id,
+            'match_id': match_id,
+        }, **data)
     session.commit()
 
 
@@ -52,7 +80,7 @@ def scrap_summoner(summoner_ids=None):
             }
 
             Match.get_or_create(session, {'id': match['matchId']})
-            PlayerMatch.get_or_create(session, {
+            PlayerMatchMap.get_or_create(session, {
                 'player_id': summoner_id,
                 'match_id': data['match_id'],
             }, **data)

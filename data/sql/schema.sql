@@ -7,12 +7,13 @@ CREATE TABLE player(
 CREATE TABLE match(
   id BIGINT PRIMARY KEY,
   version TEXT,
-  start TIMESTAMP,
+  creation TIMESTAMP,
+  duration INT,
   type TEXT,
   queue_type TEXT
 );
 
-CREATE TABLE player_match(
+CREATE TABLE player_match_map(
   player_id BIGINT REFERENCES player(id),
   match_id BIGINT REFERENCES match(id),
   role TEXT,
@@ -23,6 +24,7 @@ CREATE TABLE player_match(
   kills INT,
   deaths INT,
   assists INT,
+  has_won BOOLEAN,
 
   PRIMARY KEY (player_id, match_id)
 );
