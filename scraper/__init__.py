@@ -6,7 +6,7 @@ from scraper.settings import Config
 
 
 def fetch(resource, **kwargs):
-    url = 'https://br.api.pvp.net/api/lol/br/v2.2/' + resource
+    url = 'https://br.api.pvp.net/api/lol/br/' + resource
     kwargs['api_key'] = Config.TOKEN
     response = requests.get(url, params=kwargs)
     return response.json()
@@ -15,7 +15,7 @@ def fetch(resource, **kwargs):
 def scrap_match(match_id):
     session = get_session()
 
-    match_data = fetch('match/%s' % match_id)
+    match_data = fetch('v2.2/match/%s' % match_id)
 
     for participant in match_data['participantIdentities']:
         summoner_id = participant['player']['summonerId']
@@ -31,9 +31,14 @@ def scrap_summoner(summoner_ids=None):
     if summoner_ids is None:
         summoner_ids = [p.id for p in session.query(Player.id)]
 
+    summoners_data = fetch('v1.4/summoner/%s' % ','.join(summoner_ids))
+    for id, data in summoners_data.iteritems():
+        Player.get_or_create(session, {'id': id},
+                             username=data['name'])
+
     for summoner_id in summoner_ids:
         print 'fetching data for', summoner_id
-        summoner_data = fetch('matchlist/by-summoner/%s' % summoner_id)
+        summoner_data = fetch('v2.2/matchlist/by-summoner/%s' % summoner_id)
         for match in summoner_data['matches']:
             print 'parsing', match['matchId']
             data = {
